@@ -12,72 +12,68 @@ class Calculator {
   }
 
   appendNumber(number) {
+    if (number === "." && this.currentValue.includes(".")) return; // prevent multiple decimals
     this.currentValue += number;
     this.updateDisplay();
   }
 
   chooseOperator(operator) {
-    if (this.currentValue === "") return;
-    if (this.previousValue !== "") this.compute();
+    if (!this.currentValue) return;
+    if (this.previousValue) this.compute();
+
     this.operator = operator;
     this.previousValue = this.currentValue;
     this.currentValue = "";
   }
 
   compute() {
-    let result;
     const prev = parseFloat(this.previousValue);
     const curr = parseFloat(this.currentValue);
+    if (isNaN(prev) || isNaN(curr)) return;
 
-    switch (this.operator) {
-      case "+":
-        result = prev + curr;
-        break;
-      case "-":
-        result = prev - curr;
-        break;
-      case "*":
-        result = prev * curr;
-        break;
-      case "/":
-        if (curr === 0) {
-          alert("Error: Division by zero is not allowed");
-          return;
-        }
-        result = prev / curr;
-        break;
-      default:
-        return;
+    const operations = {
+      "+": (a, b) => a + b,
+      "-": (a, b) => a - b,
+      "*": (a, b) => a * b,
+      "/": (a, b) => (b === 0 ? NaN : a / b),
+    };
+
+    const result = operations[this.operator]?.(prev, curr);
+    if (isNaN(result)) {
+      alert("Error: Invalid operation (maybe division by zero)");
+      return this.clear();
     }
+
     this.currentValue = result.toString();
     this.operator = null;
     this.previousValue = "";
     this.updateDisplay();
   }
 
+  deleteNumber() {
+    this.currentValue = this.currentValue.slice(0, -1);
+    this.updateDisplay();
+  }
+
   updateDisplay() {
-    this.displayElement.textContent = this.currentValue;
+    this.displayElement.textContent = this.currentValue || "0";
   }
 }
 
-let calculator = new Calculator(document.querySelector(".display"));
+// ---------- Setup ----------
+const calculator = new Calculator(document.querySelector(".display"));
 
-document.querySelectorAll(".nums").forEach((num) => {
-  num.addEventListener("click", () => {
-    calculator.appendNumber(num.textContent);
-  });
-});
+const actions = {
+  ".nums": (el) => calculator.appendNumber(el.textContent),
+  ".operator": (el) => calculator.chooseOperator(el.textContent),
+  ".equal": () => calculator.compute(),
+  ".clear": () => calculator.clear(),
+  ".del": () => calculator.deleteNumber(),
+};
 
-document.querySelectorAll(".operator").forEach((operator) => {
-  operator.addEventListener("click", () => {
-    calculator.chooseOperator(operator.textContent);
-  });
-});
-
-document.querySelector(".equal").addEventListener("click", () => {
-  calculator.compute();
-});
-
-document.querySelector(".clear").addEventListener("click", () => {
-  calculator.clear();
-});
+// attach events dynamically
+for (const [selector, handler] of Object.entries(actions)) {
+  document
+    .querySelectorAll(selector)
+    .forEach((el) => el.addEventListener("click", () => handler(el)));
+}
